@@ -36,6 +36,12 @@ export default function TabLayout() {
       icon: 'map.fill',
       label: 'Yards',
     },
+    {
+      name: 'profile',
+      route: '/(tabs)/profile',
+      icon: 'person.fill',
+      label: 'Profile',
+    },
   ];
 
   // Use NativeTabs for iOS, custom FloatingTabBar for Android and Web
@@ -58,6 +64,10 @@ export default function TabLayout() {
           <Icon sf="map.fill" drawable="ic_yards" />
           <Label>Yards</Label>
         </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="profile">
+          <Icon sf="person.fill" drawable="ic_profile" />
+          <Label>Profile</Label>
+        </NativeTabs.Trigger>
       </NativeTabs>
     );
   }
@@ -75,8 +85,9 @@ export default function TabLayout() {
         <Stack.Screen name="marketplace" />
         <Stack.Screen name="businessListings" />
         <Stack.Screen name="yardInfo" />
+        <Stack.Screen name="profile" />
       </Stack>
-      <FloatingTabBar tabs={tabs} containerWidth={320} />
+      <FloatingTabBar tabs={tabs} containerWidth={380} />
     </>
   );
 }
