@@ -1,11 +1,15 @@
 
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
 import { Stack } from 'expo-router';
 import FloatingTabBar, { TabBarItem } from '@/components/FloatingTabBar';
+import { useThemeColors } from '@/styles/commonStyles';
 
 export default function TabLayout() {
+  const colorScheme = useColorScheme();
+  const colors = useThemeColors();
+
   // Define the tabs configuration for MetalMayhem
   const tabs: TabBarItem[] = [
     {
