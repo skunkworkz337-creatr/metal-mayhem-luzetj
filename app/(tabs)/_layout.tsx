@@ -31,16 +31,16 @@ export default function TabLayout() {
       label: 'Business',
     },
     {
+      name: 'messages',
+      route: '/(tabs)/messages',
+      icon: 'bubble.left.and.bubble.right.fill',
+      label: 'Messages',
+    },
+    {
       name: 'yardInfo',
       route: '/(tabs)/yardInfo',
       icon: 'map.fill',
       label: 'Yards',
-    },
-    {
-      name: 'profile',
-      route: '/(tabs)/profile',
-      icon: 'person.fill',
-      label: 'Profile',
     },
   ];
 
@@ -60,13 +60,13 @@ export default function TabLayout() {
           <Icon sf="building.2.fill" drawable="ic_business" />
           <Label>Business</Label>
         </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="messages">
+          <Icon sf="bubble.left.and.bubble.right.fill" drawable="ic_messages" />
+          <Label>Messages</Label>
+        </NativeTabs.Trigger>
         <NativeTabs.Trigger name="yardInfo">
           <Icon sf="map.fill" drawable="ic_yards" />
           <Label>Yards</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="profile">
-          <Icon sf="person.fill" drawable="ic_profile" />
-          <Label>Profile</Label>
         </NativeTabs.Trigger>
       </NativeTabs>
     );
@@ -84,10 +84,11 @@ export default function TabLayout() {
         <Stack.Screen name="metalTypes" />
         <Stack.Screen name="marketplace" />
         <Stack.Screen name="businessListings" />
+        <Stack.Screen name="messages" />
         <Stack.Screen name="yardInfo" />
         <Stack.Screen name="profile" />
       </Stack>
-      <FloatingTabBar tabs={tabs} containerWidth={380} />
+      <FloatingTabBar tabs={tabs} containerWidth={420} />
     </>
   );
 }

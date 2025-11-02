@@ -4,42 +4,69 @@ import { View, Text, StyleSheet, ScrollView, useColorScheme, TouchableOpacity } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { useRouter } from 'expo-router';
 
 export default function MarketplaceScreen() {
   const colorScheme = useColorScheme();
   const colors = useThemeColors();
   const isDark = colorScheme === 'dark';
+  const router = useRouter();
 
   const listings = [
     { 
+      id: 'listing-1',
       title: 'Old Washing Machine', 
       description: 'Non-working washer, free for pickup',
       location: 'Austin, TX',
       icon: 'washer.fill',
-      posted: '2 hours ago'
+      posted: '2 hours ago',
+      sellerId: 'seller-1',
+      sellerName: 'Sarah Johnson',
     },
     { 
+      id: 'listing-2',
       title: 'Car Parts - Various', 
       description: 'Assorted metal car parts from old sedan',
       location: 'Dallas, TX',
       icon: 'car.fill',
-      posted: '5 hours ago'
+      posted: '5 hours ago',
+      sellerId: 'seller-3',
+      sellerName: 'Tom Wilson',
     },
     { 
+      id: 'listing-3',
       title: 'Copper Pipes', 
       description: 'Approx 50lbs of copper piping',
       location: 'Houston, TX',
       icon: 'pipe.and.drop.fill',
-      posted: '1 day ago'
+      posted: '1 day ago',
+      sellerId: 'seller-2',
+      sellerName: 'Mike Chen',
     },
     { 
+      id: 'listing-4',
       title: 'Steel Beams', 
       description: 'Construction leftovers, heavy duty',
       location: 'San Antonio, TX',
       icon: 'square.stack.3d.up.fill',
-      posted: '2 days ago'
+      posted: '2 days ago',
+      sellerId: 'seller-4',
+      sellerName: 'Lisa Martinez',
     },
   ];
+
+  const handleContactSeller = (listing: typeof listings[0]) => {
+    // Navigate to chat screen with seller info
+    router.push({
+      pathname: '/chat',
+      params: {
+        conversationId: `conv-${listing.id}`,
+        participantName: listing.sellerName,
+        participantType: 'seller',
+        icon: listing.icon,
+      },
+    });
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -56,40 +83,47 @@ export default function MarketplaceScreen() {
         showsVerticalScrollIndicator={false}
       >
         {listings.map((listing, index) => (
-          <TouchableOpacity 
+          <View 
             key={index}
-            activeOpacity={0.7}
+            style={[
+              styles.card,
+              { 
+                backgroundColor: colors.card,
+                borderColor: colors.outline,
+              },
+              isDark && styles.cardDark
+            ]}
           >
-            <View 
-              style={[
-                styles.card,
-                { 
-                  backgroundColor: colors.card,
-                  borderColor: colors.outline,
-                },
-                isDark && styles.cardDark
-              ]}
-            >
-              <View style={styles.cardHeader}>
-                <IconSymbol name={listing.icon} size={28} color={colors.primary} />
-                <View style={styles.headerText}>
-                  <Text style={[styles.listingTitle, { color: colors.text }]}>{listing.title}</Text>
-                  <Text style={[styles.location, { color: colors.textSecondary }]}>
-                    <IconSymbol name="location.fill" size={12} color={colors.textSecondary} />
-                    {' '}{listing.location}
-                  </Text>
-                </View>
+            <View style={styles.cardHeader}>
+              <IconSymbol name={listing.icon} size={28} color={colors.primary} />
+              <View style={styles.headerText}>
+                <Text style={[styles.listingTitle, { color: colors.text }]}>{listing.title}</Text>
+                <Text style={[styles.location, { color: colors.textSecondary }]}>
+                  <IconSymbol name="location.fill" size={12} color={colors.textSecondary} />
+                  {' '}{listing.location}
+                </Text>
               </View>
-              
-              <Text style={[styles.description, { color: colors.text }]}>
-                {listing.description}
-              </Text>
-              
+            </View>
+            
+            <Text style={[styles.description, { color: colors.text }]}>
+              {listing.description}
+            </Text>
+            
+            <View style={styles.footer}>
               <Text style={[styles.posted, { color: colors.textSecondary }]}>
                 Posted {listing.posted}
               </Text>
+              
+              <TouchableOpacity
+                style={[styles.contactButton, { backgroundColor: colors.primary }]}
+                onPress={() => handleContactSeller(listing)}
+                activeOpacity={0.7}
+              >
+                <IconSymbol name="bubble.left.fill" size={16} color="#FFFFFF" />
+                <Text style={styles.contactButtonText}>Contact Seller</Text>
+              </TouchableOpacity>
             </View>
-          </TouchableOpacity>
+          </View>
         ))}
         
         <View style={{ height: 100 }} />
@@ -163,11 +197,29 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '400',
     lineHeight: 22,
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  footer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   posted: {
     fontSize: 12,
     fontWeight: '400',
+  },
+  contactButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  contactButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '700',
   },
   fab: {
     position: 'absolute',

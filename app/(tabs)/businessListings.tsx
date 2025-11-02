@@ -4,46 +4,69 @@ import { View, Text, StyleSheet, ScrollView, useColorScheme, TouchableOpacity } 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
+import { useRouter } from 'expo-router';
 
 export default function BusinessListingsScreen() {
   const colorScheme = useColorScheme();
   const colors = useThemeColors();
   const isDark = colorScheme === 'dark';
+  const router = useRouter();
 
   const businesses = [
     { 
+      id: 'business-1',
       name: 'Quick Haul Services', 
       type: 'Pickup Service',
       description: 'Fast and reliable metal pickup',
       verified: true,
       rating: 4.8,
-      icon: 'truck.box.fill'
+      icon: 'truck.box.fill',
+      businessId: 'business-1',
     },
     { 
+      id: 'business-2',
       name: 'Metro Recycling Co.', 
       type: 'Recycling Center',
       description: 'Full-service recycling facility',
       verified: true,
       rating: 4.6,
-      icon: 'arrow.3.trianglepath'
+      icon: 'arrow.3.trianglepath',
+      businessId: 'business-2',
     },
     { 
+      id: 'business-3',
       name: 'Scrap Masters', 
       type: 'Scrap Dealer',
       description: 'Best prices for all metal types',
       verified: false,
       rating: 4.3,
-      icon: 'building.2.fill'
+      icon: 'building.2.fill',
+      businessId: 'business-3',
     },
     { 
+      id: 'business-4',
       name: 'Green Earth Recyclers', 
       type: 'Eco-Friendly Service',
       description: 'Sustainable metal recycling',
       verified: true,
       rating: 4.9,
-      icon: 'leaf.fill'
+      icon: 'leaf.fill',
+      businessId: 'business-4',
     },
   ];
+
+  const handleContactBusiness = (business: typeof businesses[0]) => {
+    // Navigate to chat screen with business info
+    router.push({
+      pathname: '/chat',
+      params: {
+        conversationId: `conv-${business.id}`,
+        participantName: business.name,
+        participantType: 'business',
+        icon: business.icon,
+      },
+    });
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
@@ -60,58 +83,58 @@ export default function BusinessListingsScreen() {
         showsVerticalScrollIndicator={false}
       >
         {businesses.map((business, index) => (
-          <TouchableOpacity 
+          <View 
             key={index}
-            activeOpacity={0.7}
+            style={[
+              styles.card,
+              { 
+                backgroundColor: colors.card,
+                borderColor: colors.outline,
+              },
+              isDark && styles.cardDark
+            ]}
           >
-            <View 
-              style={[
-                styles.card,
-                { 
-                  backgroundColor: colors.card,
-                  borderColor: colors.outline,
-                },
-                isDark && styles.cardDark
-              ]}
-            >
-              <View style={styles.cardHeader}>
-                <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
-                  <IconSymbol name={business.icon} size={28} color={colors.primary} />
-                </View>
-                <View style={styles.headerText}>
-                  <View style={styles.nameRow}>
-                    <Text style={[styles.businessName, { color: colors.text }]}>{business.name}</Text>
-                    {business.verified && (
-                      <View style={[styles.badge, { backgroundColor: colors.primary }]}>
-                        <IconSymbol name="checkmark.seal.fill" size={16} color="#FFFFFF" />
-                      </View>
-                    )}
-                  </View>
-                  <Text style={[styles.businessType, { color: colors.textSecondary }]}>
-                    {business.type}
-                  </Text>
-                </View>
+            <View style={styles.cardHeader}>
+              <View style={[styles.iconContainer, { backgroundColor: colors.primary + '20' }]}>
+                <IconSymbol name={business.icon} size={28} color={colors.primary} />
               </View>
-              
-              <Text style={[styles.description, { color: colors.text }]}>
-                {business.description}
-              </Text>
-              
-              <View style={styles.footer}>
-                <View style={styles.rating}>
-                  <IconSymbol name="star.fill" size={16} color={colors.secondary} />
-                  <Text style={[styles.ratingText, { color: colors.text }]}>
-                    {business.rating}
-                  </Text>
+              <View style={styles.headerText}>
+                <View style={styles.nameRow}>
+                  <Text style={[styles.businessName, { color: colors.text }]}>{business.name}</Text>
+                  {business.verified && (
+                    <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                      <IconSymbol name="checkmark.seal.fill" size={16} color="#FFFFFF" />
+                    </View>
+                  )}
                 </View>
-                <TouchableOpacity>
-                  <Text style={[styles.contactButton, { color: colors.primary }]}>
-                    Contact
-                  </Text>
-                </TouchableOpacity>
+                <Text style={[styles.businessType, { color: colors.textSecondary }]}>
+                  {business.type}
+                </Text>
               </View>
             </View>
-          </TouchableOpacity>
+            
+            <Text style={[styles.description, { color: colors.text }]}>
+              {business.description}
+            </Text>
+            
+            <View style={styles.footer}>
+              <View style={styles.rating}>
+                <IconSymbol name="star.fill" size={16} color={colors.secondary} />
+                <Text style={[styles.ratingText, { color: colors.text }]}>
+                  {business.rating}
+                </Text>
+              </View>
+              
+              <TouchableOpacity
+                style={[styles.contactButton, { backgroundColor: colors.primary }]}
+                onPress={() => handleContactBusiness(business)}
+                activeOpacity={0.7}
+              >
+                <IconSymbol name="bubble.left.fill" size={16} color="#FFFFFF" />
+                <Text style={styles.contactButtonText}>Contact</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         ))}
         
         <View style={{ height: 100 }} />
@@ -214,7 +237,16 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   contactButton: {
-    fontSize: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    gap: 6,
+  },
+  contactButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
     fontWeight: '700',
   },
 });
