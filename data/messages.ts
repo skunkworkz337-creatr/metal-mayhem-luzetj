@@ -5,6 +5,7 @@ export interface Message {
   conversationId: string;
   senderId: string;
   senderName: string;
+  senderVerified?: boolean;
   content: string;
   timestamp: Date;
   read: boolean;
@@ -15,6 +16,7 @@ export interface Conversation {
   participantId: string;
   participantName: string;
   participantType: 'seller' | 'business';
+  participantVerified?: boolean;
   listingTitle?: string;
   businessType?: string;
   lastMessage?: string;
@@ -34,6 +36,7 @@ export const mockConversations: Conversation[] = [
     participantId: 'seller-1',
     participantName: 'Sarah Johnson',
     participantType: 'seller',
+    participantVerified: true,
     listingTitle: 'Old Washing Machine',
     lastMessage: 'Sure, I can meet tomorrow at 2pm',
     lastMessageTime: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
@@ -45,6 +48,7 @@ export const mockConversations: Conversation[] = [
     participantId: 'business-1',
     participantName: 'Quick Haul Services',
     participantType: 'business',
+    participantVerified: true,
     businessType: 'Pickup Service',
     lastMessage: 'We can schedule a pickup for next week',
     lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
@@ -56,6 +60,7 @@ export const mockConversations: Conversation[] = [
     participantId: 'seller-2',
     participantName: 'Mike Chen',
     participantType: 'seller',
+    participantVerified: false,
     listingTitle: 'Copper Pipes',
     lastMessage: 'Thanks for your interest!',
     lastMessageTime: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
@@ -72,6 +77,7 @@ export const mockMessages: { [conversationId: string]: Message[] } = {
       conversationId: 'conv-1',
       senderId: CURRENT_USER_ID,
       senderName: CURRENT_USER_NAME,
+      senderVerified: false,
       content: 'Hi, is the washing machine still available?',
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3),
       read: true,
@@ -81,6 +87,7 @@ export const mockMessages: { [conversationId: string]: Message[] } = {
       conversationId: 'conv-1',
       senderId: 'seller-1',
       senderName: 'Sarah Johnson',
+      senderVerified: true,
       content: 'Yes, it is! When would you like to pick it up?',
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
       read: true,
@@ -90,6 +97,7 @@ export const mockMessages: { [conversationId: string]: Message[] } = {
       conversationId: 'conv-1',
       senderId: CURRENT_USER_ID,
       senderName: CURRENT_USER_NAME,
+      senderVerified: false,
       content: 'How about tomorrow afternoon?',
       timestamp: new Date(Date.now() - 1000 * 60 * 60),
       read: true,
@@ -99,6 +107,7 @@ export const mockMessages: { [conversationId: string]: Message[] } = {
       conversationId: 'conv-1',
       senderId: 'seller-1',
       senderName: 'Sarah Johnson',
+      senderVerified: true,
       content: 'Sure, I can meet tomorrow at 2pm',
       timestamp: new Date(Date.now() - 1000 * 60 * 30),
       read: false,
@@ -110,6 +119,7 @@ export const mockMessages: { [conversationId: string]: Message[] } = {
       conversationId: 'conv-2',
       senderId: CURRENT_USER_ID,
       senderName: CURRENT_USER_NAME,
+      senderVerified: false,
       content: 'Do you offer pickup services for large metal items?',
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4),
       read: true,
@@ -119,6 +129,7 @@ export const mockMessages: { [conversationId: string]: Message[] } = {
       conversationId: 'conv-2',
       senderId: 'business-1',
       senderName: 'Quick Haul Services',
+      senderVerified: true,
       content: 'Yes, we do! What type of items do you have?',
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 3),
       read: true,
@@ -128,6 +139,7 @@ export const mockMessages: { [conversationId: string]: Message[] } = {
       conversationId: 'conv-2',
       senderId: CURRENT_USER_ID,
       senderName: CURRENT_USER_NAME,
+      senderVerified: false,
       content: 'I have some old appliances and steel beams',
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2.5),
       read: true,
@@ -137,6 +149,7 @@ export const mockMessages: { [conversationId: string]: Message[] } = {
       conversationId: 'conv-2',
       senderId: 'business-1',
       senderName: 'Quick Haul Services',
+      senderVerified: true,
       content: 'We can schedule a pickup for next week',
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
       read: true,
@@ -148,6 +161,7 @@ export const mockMessages: { [conversationId: string]: Message[] } = {
       conversationId: 'conv-3',
       senderId: CURRENT_USER_ID,
       senderName: CURRENT_USER_NAME,
+      senderVerified: false,
       content: 'Interested in the copper pipes. What&apos;s the condition?',
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25),
       read: true,
@@ -157,6 +171,7 @@ export const mockMessages: { [conversationId: string]: Message[] } = {
       conversationId: 'conv-3',
       senderId: 'seller-2',
       senderName: 'Mike Chen',
+      senderVerified: false,
       content: 'Thanks for your interest!',
       timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
       read: true,

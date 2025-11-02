@@ -6,14 +6,20 @@ import { useThemeColors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { scrapingScheduler, ScrapingConfig } from '@/services/scrapingScheduler';
 import { zohoApi, ZOHO_SETUP_INSTRUCTIONS } from '@/services/zohoApi';
+import { CURRENT_USER, isAdmin, isVerified } from '@/data/users';
+import { useRouter } from 'expo-router';
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = useThemeColors();
   const isDark = colorScheme === 'dark';
+  const router = useRouter();
 
   const [schedulerStatus, setSchedulerStatus] = useState<ScrapingConfig | null>(null);
   const [schedulerEnabled, setSchedulerEnabled] = useState(true);
+
+  const userIsAdmin = isAdmin(CURRENT_USER);
+  const userIsVerified = isVerified(CURRENT_USER);
 
   useEffect(() => {
     // Get initial scheduler status
@@ -21,16 +27,25 @@ export default function ProfileScreen() {
     setSchedulerStatus(status);
     setSchedulerEnabled(status.enabled);
 
-    // Start scheduler
-    scrapingScheduler.start();
+    // Start scheduler if admin
+    if (userIsAdmin) {
+      scrapingScheduler.start();
+    }
 
     return () => {
       // Cleanup
-      scrapingScheduler.stop();
+      if (userIsAdmin) {
+        scrapingScheduler.stop();
+      }
     };
   }, []);
 
   const toggleScheduler = (value: boolean) => {
+    if (!userIsAdmin) {
+      Alert.alert('Admin Only', 'Web scraping settings are only available to administrators');
+      return;
+    }
+
     setSchedulerEnabled(value);
     scrapingScheduler.updateConfig({ enabled: value });
     
@@ -44,6 +59,11 @@ export default function ProfileScreen() {
   };
 
   const triggerManualScraping = async () => {
+    if (!userIsAdmin) {
+      Alert.alert('Admin Only', 'Manual scraping is only available to administrators');
+      return;
+    }
+
     Alert.alert(
       'Manual Scraping',
       'This will trigger an immediate scraping of metal prices. Continue?',
@@ -67,6 +87,11 @@ export default function ProfileScreen() {
   };
 
   const showZohoSetup = () => {
+    if (!userIsAdmin) {
+      Alert.alert('Admin Only', 'Zoho integration settings are only available to administrators');
+      return;
+    }
+
     Alert.alert(
       'Zoho API Setup',
       ZOHO_SETUP_INSTRUCTIONS,
@@ -90,9 +115,9 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Settings & Profile</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Profile & Settings</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Manage app settings and integrations
+          {CURRENT_USER.name}
         </Text>
       </View>
 
@@ -101,121 +126,219 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* Web Scraping Section */}
+        {/* User Profile Section */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.outline }]}>
           <View style={styles.sectionHeader}>
-            <IconSymbol name="globe" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Web Scraping</Text>
+            <IconSymbol name="person.circle.fill" size={24} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
           </View>
 
-          <View style={styles.settingRow}>
-            <View style={styles.settingInfo}>
-              <Text style={[styles.settingLabel, { color: colors.text }]}>Auto Scraping</Text>
-              <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                Automatically scrape prices every Monday at 11:59 PM CST
-              </Text>
+          <View style={styles.profileInfo}>
+            <View style={[styles.avatarCircle, { backgroundColor: colors.primary + '20' }]}>
+              <IconSymbol name="person.fill" size={40} color={colors.primary} />
             </View>
-            <Switch
-              value={schedulerEnabled}
-              onValueChange={toggleScheduler}
-              trackColor={{ false: colors.textSecondary, true: colors.primary }}
-              thumbColor="#FFFFFF"
-            />
+            <View style={styles.profileDetails}>
+              <View style={styles.nameRow}>
+                <Text style={[styles.profileName, { color: colors.text }]}>{CURRENT_USER.name}</Text>
+                {userIsVerified && (
+                  <View style={[styles.verifiedBadge, { backgroundColor: colors.primary }]}>
+                    <IconSymbol name="checkmark.seal.fill" size={16} color="#FFFFFF" />
+                  </View>
+                )}
+                {userIsAdmin && (
+                  <View style={[styles.adminBadge, { backgroundColor: colors.secondary }]}>
+                    <Text style={styles.adminBadgeText}>ADMIN</Text>
+                  </View>
+                )}
+              </View>
+              <Text style={[styles.profileEmail, { color: colors.textSecondary }]}>{CURRENT_USER.email}</Text>
+              {CURRENT_USER.phone && (
+                <Text style={[styles.profilePhone, { color: colors.textSecondary }]}>{CURRENT_USER.phone}</Text>
+              )}
+            </View>
           </View>
 
-          {schedulerStatus && (
-            <>
-              <View style={styles.infoBox}>
-                <View style={styles.infoRow}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Status:</Text>
-                  <Text style={[styles.infoValue, { color: schedulerEnabled ? colors.primary : colors.textSecondary }]}>
-                    {schedulerEnabled ? 'Active' : 'Disabled'}
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Last Run:</Text>
-                  <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {schedulerStatus.lastRun ? formatDate(schedulerStatus.lastRun) : 'Never'}
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Next Run:</Text>
-                  <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {formatDate(schedulerStatus.nextRun)}
-                  </Text>
-                </View>
-              </View>
-
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                onPress={triggerManualScraping}
-                activeOpacity={0.7}
-              >
-                <IconSymbol name="arrow.clockwise" size={18} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Trigger Manual Scraping</Text>
-              </TouchableOpacity>
-            </>
+          {!userIsVerified && (
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.primary }]}
+              onPress={() => router.push('/onboarding')}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="checkmark.seal.fill" size={18} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>Complete Verification</Text>
+            </TouchableOpacity>
           )}
         </View>
 
-        {/* Zoho Integration Section */}
-        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.outline }]}>
+        {/* Badges Section */}
+        <TouchableOpacity
+          style={[styles.section, { backgroundColor: colors.card, borderColor: colors.outline }]}
+          onPress={() => router.push('/badges')}
+          activeOpacity={0.7}
+        >
           <View style={styles.sectionHeader}>
-            <IconSymbol name="cloud.fill" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Zoho Integration</Text>
+            <IconSymbol name="star.fill" size={24} color={colors.primary} />
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Badges</Text>
+            <View style={[styles.badgeCount, { backgroundColor: colors.primary }]}>
+              <Text style={styles.badgeCountText}>{CURRENT_USER.badges.length}</Text>
+            </View>
+            <IconSymbol name="chevron.right" size={20} color={colors.textSecondary} style={{ marginLeft: 'auto' }} />
           </View>
 
           <Text style={[styles.description, { color: colors.textSecondary }]}>
-            Zoho API enables cloud storage for pricing tickets, yard data, and scraped metal prices.
+            View your earned badges and see what&apos;s available to unlock
           </Text>
 
-          <View style={styles.featureList}>
-            <View style={styles.featureItem}>
-              <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
-              <Text style={[styles.featureText, { color: colors.text }]}>
-                Submit pricing tickets online
-              </Text>
+          {CURRENT_USER.badges.length > 0 && (
+            <View style={styles.badgePreview}>
+              {CURRENT_USER.badges.slice(0, 3).map((badge) => (
+                <View
+                  key={badge.id}
+                  style={[styles.badgeIcon, { backgroundColor: colors.primary + '20' }]}
+                >
+                  <IconSymbol name={badge.icon} size={24} color={colors.primary} />
+                </View>
+              ))}
+              {CURRENT_USER.badges.length > 3 && (
+                <View style={[styles.badgeMore, { backgroundColor: colors.textSecondary + '20' }]}>
+                  <Text style={[styles.badgeMoreText, { color: colors.textSecondary }]}>
+                    +{CURRENT_USER.badges.length - 3}
+                  </Text>
+                </View>
+              )}
             </View>
-            <View style={styles.featureItem}>
-              <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
-              <Text style={[styles.featureText, { color: colors.text }]}>
-                Store yard information in cloud
-              </Text>
-            </View>
-            <View style={styles.featureItem}>
-              <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
-              <Text style={[styles.featureText, { color: colors.text }]}>
-                Sync scraped pricing data
-              </Text>
-            </View>
-            <View style={styles.featureItem}>
-              <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
-              <Text style={[styles.featureText, { color: colors.text }]}>
-                Access data across devices
-              </Text>
-            </View>
-          </View>
+          )}
+        </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: colors.primary }]}
-            onPress={showZohoSetup}
-            activeOpacity={0.7}
-          >
-            <IconSymbol name="info.circle.fill" size={18} color="#FFFFFF" />
-            <Text style={styles.actionButtonText}>View Setup Instructions</Text>
-          </TouchableOpacity>
+        {/* Admin-Only Web Scraping Section */}
+        {userIsAdmin && (
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.outline }]}>
+            <View style={styles.sectionHeader}>
+              <IconSymbol name="globe" size={24} color={colors.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Web Scraping</Text>
+              <View style={[styles.adminBadge, { backgroundColor: colors.secondary, marginLeft: 8 }]}>
+                <Text style={styles.adminBadgeText}>ADMIN</Text>
+              </View>
+            </View>
 
-          <View style={[styles.statusBox, { backgroundColor: colors.background, borderColor: colors.outline }]}>
-            <IconSymbol 
-              name={zohoApi.isAuthenticated() ? "checkmark.circle.fill" : "xmark.circle.fill"} 
-              size={20} 
-              color={zohoApi.isAuthenticated() ? colors.primary : colors.textSecondary} 
-            />
-            <Text style={[styles.statusText, { color: colors.text }]}>
-              Status: {zohoApi.isAuthenticated() ? 'Connected' : 'Not Connected'}
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
+              Configure automated web scraping for metal prices. For production, implement this on a backend server with a cron job or cloud function (AWS Lambda, Google Cloud Functions) to ensure reliable execution.
             </Text>
+
+            <View style={styles.settingRow}>
+              <View style={styles.settingInfo}>
+                <Text style={[styles.settingLabel, { color: colors.text }]}>Auto Scraping</Text>
+                <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
+                  Automatically scrape prices every Monday at 11:59 PM CST
+                </Text>
+              </View>
+              <Switch
+                value={schedulerEnabled}
+                onValueChange={toggleScheduler}
+                trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                thumbColor="#FFFFFF"
+              />
+            </View>
+
+            {schedulerStatus && (
+              <>
+                <View style={styles.infoBox}>
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Status:</Text>
+                    <Text style={[styles.infoValue, { color: schedulerEnabled ? colors.primary : colors.textSecondary }]}>
+                      {schedulerEnabled ? 'Active' : 'Disabled'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Last Run:</Text>
+                    <Text style={[styles.infoValue, { color: colors.text }]}>
+                      {schedulerStatus.lastRun ? formatDate(schedulerStatus.lastRun) : 'Never'}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Next Run:</Text>
+                    <Text style={[styles.infoValue, { color: colors.text }]}>
+                      {formatDate(schedulerStatus.nextRun)}
+                    </Text>
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                  onPress={triggerManualScraping}
+                  activeOpacity={0.7}
+                >
+                  <IconSymbol name="arrow.clockwise" size={18} color="#FFFFFF" />
+                  <Text style={styles.actionButtonText}>Trigger Manual Scraping</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
-        </View>
+        )}
+
+        {/* Admin-Only Zoho Integration Section */}
+        {userIsAdmin && (
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.outline }]}>
+            <View style={styles.sectionHeader}>
+              <IconSymbol name="cloud.fill" size={24} color={colors.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Zoho Integration</Text>
+              <View style={[styles.adminBadge, { backgroundColor: colors.secondary, marginLeft: 8 }]}>
+                <Text style={styles.adminBadgeText}>ADMIN</Text>
+              </View>
+            </View>
+
+            <Text style={[styles.description, { color: colors.textSecondary }]}>
+              Zoho API enables cloud storage for pricing tickets, yard data, and scraped metal prices. This is an admin-only feature for managing operational data.
+            </Text>
+
+            <View style={styles.featureList}>
+              <View style={styles.featureItem}>
+                <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
+                <Text style={[styles.featureText, { color: colors.text }]}>
+                  Submit pricing tickets online
+                </Text>
+              </View>
+              <View style={styles.featureItem}>
+                <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
+                <Text style={[styles.featureText, { color: colors.text }]}>
+                  Store yard information in cloud
+                </Text>
+              </View>
+              <View style={styles.featureItem}>
+                <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
+                <Text style={[styles.featureText, { color: colors.text }]}>
+                  Sync scraped pricing data
+                </Text>
+              </View>
+              <View style={styles.featureItem}>
+                <IconSymbol name="checkmark.circle.fill" size={20} color={colors.primary} />
+                <Text style={[styles.featureText, { color: colors.text }]}>
+                  Access data across devices
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.actionButton, { backgroundColor: colors.primary }]}
+              onPress={showZohoSetup}
+              activeOpacity={0.7}
+            >
+              <IconSymbol name="info.circle.fill" size={18} color="#FFFFFF" />
+              <Text style={styles.actionButtonText}>View Setup Instructions</Text>
+            </TouchableOpacity>
+
+            <View style={[styles.statusBox, { backgroundColor: colors.background, borderColor: colors.outline }]}>
+              <IconSymbol 
+                name={zohoApi.isAuthenticated() ? "checkmark.circle.fill" : "xmark.circle.fill"} 
+                size={20} 
+                color={zohoApi.isAuthenticated() ? colors.primary : colors.textSecondary} 
+              />
+              <Text style={[styles.statusText, { color: colors.text }]}>
+                Status: {zohoApi.isAuthenticated() ? 'Connected' : 'Not Connected'}
+              </Text>
+            </View>
+          </View>
+        )}
 
         {/* App Info Section */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.outline }]}>
@@ -291,6 +414,93 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 20,
+    fontWeight: '700',
+  },
+  profileInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 16,
+  },
+  avatarCircle: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  profileDetails: {
+    flex: 1,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 6,
+  },
+  profileName: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  verifiedBadge: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  adminBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  adminBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  profileEmail: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  profilePhone: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  badgeCount: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeCountText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  badgePreview: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  badgeIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeMore: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeMoreText: {
+    fontSize: 14,
     fontWeight: '700',
   },
   settingRow: {

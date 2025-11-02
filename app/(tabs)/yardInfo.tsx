@@ -5,222 +5,186 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { zohoApi, PricingTicket, ZOHO_SETUP_INSTRUCTIONS } from '@/services/zohoApi';
+import { CURRENT_USER } from '@/data/users';
 
 export default function YardInfoScreen() {
   const colorScheme = useColorScheme();
   const colors = useThemeColors();
   const isDark = colorScheme === 'dark';
 
-  const [showTicketModal, setShowTicketModal] = useState(false);
+  const [ticketModalVisible, setTicketModalVisible] = useState(false);
   const [selectedYard, setSelectedYard] = useState<any>(null);
-  const [ticketForm, setTicketForm] = useState({
-    metalType: '',
-    metalGrade: '',
-    pricePerPound: '',
-    quantity: '',
-    notes: '',
-  });
+  const [metalType, setMetalType] = useState('');
+  const [metalGrade, setMetalGrade] = useState('');
+  const [pricePerPound, setPricePerPound] = useState('');
+  const [quantity, setQuantity] = useState('');
+  const [notes, setNotes] = useState('');
 
   const yards = [
-    { 
-      name: 'Austin Scrap Yard', 
-      address: '123 Industrial Blvd, Austin, TX',
-      hours: 'Mon-Fri: 8AM-6PM, Sat: 9AM-4PM',
-      phone: '(512) 555-0123',
+    {
+      id: 'yard-1',
+      name: 'Austin Metal Recycling',
+      address: '123 Industrial Blvd',
+      city: 'Austin',
+      state: 'TX',
+      zipCode: '78701',
+      phone: '(512) 555-0100',
+      hours: 'Mon-Fri: 8AM-5PM, Sat: 9AM-2PM',
+      acceptedMetals: ['Copper', 'Aluminum', 'Steel', 'Brass', 'Stainless Steel'],
       verified: true,
-      acceptedMetals: ['Copper', 'Aluminum', 'Steel', 'Brass'],
+      rating: 4.8,
     },
-    { 
-      name: 'Texas Metal Recycling', 
-      address: '456 Commerce Dr, Dallas, TX',
-      hours: 'Mon-Sat: 7AM-7PM',
-      phone: '(214) 555-0456',
+    {
+      id: 'yard-2',
+      name: 'Texas Scrap Yard',
+      address: '456 Commerce St',
+      city: 'Dallas',
+      state: 'TX',
+      zipCode: '75201',
+      phone: '(214) 555-0200',
+      hours: 'Mon-Sat: 7AM-6PM',
+      acceptedMetals: ['Copper', 'Aluminum', 'Steel', 'Iron', 'Lead'],
       verified: true,
-      acceptedMetals: ['Copper', 'Aluminum', 'Steel'],
+      rating: 4.6,
     },
-    { 
-      name: 'Lone Star Salvage', 
-      address: '789 Highway 35, Houston, TX',
+    {
+      id: 'yard-3',
+      name: 'Houston Metal Works',
+      address: '789 Industrial Way',
+      city: 'Houston',
+      state: 'TX',
+      zipCode: '77001',
+      phone: '(713) 555-0300',
       hours: 'Mon-Fri: 8AM-5PM',
-      phone: '(713) 555-0789',
+      acceptedMetals: ['Copper', 'Aluminum', 'Brass', 'Bronze'],
       verified: false,
-      acceptedMetals: ['Steel', 'Iron', 'Aluminum'],
+      rating: 4.2,
     },
   ];
 
-  const openTicketModal = (yard: any) => {
+  const openTicketModal = (yard: typeof yards[0]) => {
     setSelectedYard(yard);
-    setShowTicketModal(true);
+    setTicketModalVisible(true);
   };
 
   const closeTicketModal = () => {
-    setShowTicketModal(false);
+    setTicketModalVisible(false);
     setSelectedYard(null);
-    setTicketForm({
-      metalType: '',
-      metalGrade: '',
-      pricePerPound: '',
-      quantity: '',
-      notes: '',
-    });
+    setMetalType('');
+    setMetalGrade('');
+    setPricePerPound('');
+    setQuantity('');
+    setNotes('');
   };
 
   const submitTicket = async () => {
-    if (!ticketForm.metalType || !ticketForm.pricePerPound) {
-      Alert.alert('Missing Information', 'Please fill in metal type and price per pound.');
+    if (!metalType || !metalGrade || !pricePerPound) {
+      Alert.alert('Error', 'Please fill in all required fields');
       return;
     }
 
-    try {
-      const ticket: PricingTicket = {
-        userId: 'user123', // Replace with actual user ID
-        userName: 'Current User', // Replace with actual user name
-        yardName: selectedYard.name,
-        yardAddress: selectedYard.address,
-        metalType: ticketForm.metalType,
-        metalGrade: ticketForm.metalGrade,
-        pricePerPound: parseFloat(ticketForm.pricePerPound),
-        quantity: ticketForm.quantity ? parseFloat(ticketForm.quantity) : undefined,
-        totalAmount: ticketForm.quantity 
-          ? parseFloat(ticketForm.quantity) * parseFloat(ticketForm.pricePerPound)
-          : undefined,
-        timestamp: new Date(),
-        verified: false,
-        notes: ticketForm.notes,
-      };
+    const ticket: PricingTicket = {
+      userId: CURRENT_USER.id,
+      userName: CURRENT_USER.name,
+      yardName: selectedYard.name,
+      yardAddress: `${selectedYard.address}, ${selectedYard.city}, ${selectedYard.state} ${selectedYard.zipCode}`,
+      metalType,
+      metalGrade,
+      pricePerPound: parseFloat(pricePerPound),
+      quantity: quantity ? parseFloat(quantity) : undefined,
+      totalAmount: quantity ? parseFloat(quantity) * parseFloat(pricePerPound) : undefined,
+      timestamp: new Date(),
+      verified: CURRENT_USER.verified,
+      notes,
+    };
 
-      console.log('Submitting ticket:', ticket);
-      
-      // Note: Zoho API needs to be configured first
+    try {
+      console.log('Submitting pricing ticket:', ticket);
+      // In production, this would call the Zoho API
       // await zohoApi.submitPricingTicket(ticket);
       
-      Alert.alert(
-        'Ticket Submitted',
-        'Your pricing information has been submitted for verification. Thank you for contributing to the community!',
-        [{ text: 'OK', onPress: closeTicketModal }]
-      );
+      Alert.alert('Success', 'Pricing ticket submitted successfully!');
+      closeTicketModal();
     } catch (error) {
       console.error('Error submitting ticket:', error);
-      Alert.alert('Error', 'Failed to submit ticket. Please try again.');
+      Alert.alert('Error', 'Failed to submit pricing ticket');
     }
   };
 
   const showZohoSetup = () => {
-    Alert.alert(
-      'Zoho API Setup Required',
-      ZOHO_SETUP_INSTRUCTIONS,
-      [{ text: 'OK' }]
-    );
+    Alert.alert('Zoho API Setup', ZOHO_SETUP_INSTRUCTIONS, [{ text: 'OK' }]);
   };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.header}>
-        <Text style={[styles.title, { color: colors.text }]}>Yard Info & Pricing</Text>
+        <Text style={[styles.title, { color: colors.text }]}>Scrap Yards</Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Local recycling yards near you
+          Local yards and current pricing
         </Text>
       </View>
 
-      {/* Zoho Setup Banner */}
-      <TouchableOpacity 
-        style={[styles.setupBanner, { backgroundColor: colors.primary + '20', borderColor: colors.outline }]}
-        onPress={showZohoSetup}
-        activeOpacity={0.7}
-      >
-        <IconSymbol name="info.circle.fill" size={20} color={colors.primary} />
-        <Text style={[styles.setupText, { color: colors.primary }]}>
-          Tap to view Zoho API setup instructions
-        </Text>
-      </TouchableOpacity>
-      
-      <ScrollView 
+      <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {yards.map((yard, index) => (
-          <View 
-            key={index}
+        {yards.map((yard) => (
+          <View
+            key={yard.id}
             style={[
               styles.card,
-              { 
+              {
                 backgroundColor: colors.card,
                 borderColor: colors.outline,
               },
-              isDark && styles.cardDark
+              isDark && styles.cardDark,
             ]}
           >
             <View style={styles.cardHeader}>
               <View style={styles.nameRow}>
                 <Text style={[styles.yardName, { color: colors.text }]}>{yard.name}</Text>
                 {yard.verified && (
-                  <View style={[styles.badge, { backgroundColor: colors.primary }]}>
+                  <View style={[styles.verifiedBadge, { backgroundColor: colors.primary }]}>
                     <IconSymbol name="checkmark.seal.fill" size={16} color="#FFFFFF" />
                   </View>
                 )}
               </View>
+              <View style={styles.rating}>
+                <IconSymbol name="star.fill" size={16} color={colors.secondary} />
+                <Text style={[styles.ratingText, { color: colors.text }]}>{yard.rating}</Text>
+              </View>
             </View>
-            
+
             <View style={styles.infoRow}>
               <IconSymbol name="location.fill" size={16} color={colors.textSecondary} />
-              <Text style={[styles.infoText, { color: colors.text }]}>{yard.address}</Text>
+              <Text style={[styles.infoText, { color: colors.text }]}>
+                {yard.address}, {yard.city}, {yard.state} {yard.zipCode}
+              </Text>
             </View>
-            
-            <View style={styles.infoRow}>
-              <IconSymbol name="clock.fill" size={16} color={colors.textSecondary} />
-              <Text style={[styles.infoText, { color: colors.text }]}>{yard.hours}</Text>
-            </View>
-            
+
             <View style={styles.infoRow}>
               <IconSymbol name="phone.fill" size={16} color={colors.textSecondary} />
               <Text style={[styles.infoText, { color: colors.text }]}>{yard.phone}</Text>
             </View>
-            
+
+            <View style={styles.infoRow}>
+              <IconSymbol name="clock.fill" size={16} color={colors.textSecondary} />
+              <Text style={[styles.infoText, { color: colors.text }]}>{yard.hours}</Text>
+            </View>
+
             <View style={styles.metalsSection}>
-              <Text style={[styles.metalsLabel, { color: colors.textSecondary }]}>
-                Accepted Metals:
-              </Text>
+              <Text style={[styles.metalsLabel, { color: colors.textSecondary }]}>Accepted Metals:</Text>
               <View style={styles.metalTags}>
-                {yard.acceptedMetals.map((metal, idx) => (
-                  <View 
-                    key={idx}
-                    style={[
-                      styles.metalTag,
-                      { 
-                        backgroundColor: colors.primary + '20',
-                        borderColor: colors.outline,
-                      }
-                    ]}
-                  >
-                    <Text style={[styles.metalTagText, { color: colors.primary }]}>
-                      {metal}
-                    </Text>
+                {yard.acceptedMetals.map((metal, index) => (
+                  <View key={index} style={[styles.metalTag, { backgroundColor: colors.primary + '20', borderColor: colors.primary }]}>
+                    <Text style={[styles.metalTagText, { color: colors.primary }]}>{metal}</Text>
                   </View>
                 ))}
               </View>
             </View>
-            
-            <View style={styles.actions}>
-              <TouchableOpacity 
-                style={[styles.actionButton, { borderColor: colors.outline }]}
-                activeOpacity={0.7}
-              >
-                <IconSymbol name="map.fill" size={18} color={colors.primary} />
-                <Text style={[styles.actionText, { color: colors.primary }]}>Directions</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[styles.actionButton, { borderColor: colors.outline }]}
-                activeOpacity={0.7}
-              >
-                <IconSymbol name="phone.fill" size={18} color={colors.primary} />
-                <Text style={[styles.actionText, { color: colors.primary }]}>Call</Text>
-              </TouchableOpacity>
-            </View>
 
-            {/* Submit Pricing Button */}
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.submitButton, { backgroundColor: colors.primary }]}
               onPress={() => openTicketModal(yard)}
               activeOpacity={0.7}
@@ -230,30 +194,13 @@ export default function YardInfoScreen() {
             </TouchableOpacity>
           </View>
         ))}
-        
-        <TouchableOpacity 
-          style={[
-            styles.addYardButton,
-            { 
-              backgroundColor: colors.card,
-              borderColor: colors.outline,
-            },
-            isDark && styles.cardDark
-          ]}
-          activeOpacity={0.7}
-        >
-          <IconSymbol name="plus.circle.fill" size={24} color={colors.primary} />
-          <Text style={[styles.addYardText, { color: colors.primary }]}>
-            Add Unlisted Yard
-          </Text>
-        </TouchableOpacity>
-        
+
         <View style={{ height: 100 }} />
       </ScrollView>
 
-      {/* Ticket Submission Modal */}
+      {/* Pricing Ticket Modal */}
       <Modal
-        visible={showTicketModal}
+        visible={ticketModalVisible}
         animationType="slide"
         transparent={true}
         onRequestClose={closeTicketModal}
@@ -268,83 +215,77 @@ export default function YardInfoScreen() {
             </View>
 
             <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
-              <Text style={[styles.modalYardName, { color: colors.primary }]}>
-                {selectedYard?.name}
-              </Text>
+              {selectedYard && (
+                <Text style={[styles.modalYardName, { color: colors.textSecondary }]}>
+                  {selectedYard.name}
+                </Text>
+              )}
 
-              <View style={styles.formGroup}>
+              <View style={styles.inputContainer}>
                 <Text style={[styles.label, { color: colors.text }]}>Metal Type *</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.outline }]}
-                  placeholder="e.g., Copper, Aluminum"
+                  value={metalType}
+                  onChangeText={setMetalType}
+                  placeholder="e.g., Copper"
                   placeholderTextColor={colors.textSecondary}
-                  value={ticketForm.metalType}
-                  onChangeText={(text) => setTicketForm({ ...ticketForm, metalType: text })}
                 />
               </View>
 
-              <View style={styles.formGroup}>
-                <Text style={[styles.label, { color: colors.text }]}>Metal Grade</Text>
+              <View style={styles.inputContainer}>
+                <Text style={[styles.label, { color: colors.text }]}>Metal Grade *</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.outline }]}
-                  placeholder="e.g., #1 Bare Bright Copper"
+                  value={metalGrade}
+                  onChangeText={setMetalGrade}
+                  placeholder="e.g., #1 Bare Bright"
                   placeholderTextColor={colors.textSecondary}
-                  value={ticketForm.metalGrade}
-                  onChangeText={(text) => setTicketForm({ ...ticketForm, metalGrade: text })}
                 />
               </View>
 
-              <View style={styles.formGroup}>
-                <Text style={[styles.label, { color: colors.text }]}>Price Per Pound *</Text>
+              <View style={styles.inputContainer}>
+                <Text style={[styles.label, { color: colors.text }]}>Price per Pound ($) *</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.outline }]}
+                  value={pricePerPound}
+                  onChangeText={setPricePerPound}
                   placeholder="e.g., 3.50"
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="decimal-pad"
-                  value={ticketForm.pricePerPound}
-                  onChangeText={(text) => setTicketForm({ ...ticketForm, pricePerPound: text })}
                 />
               </View>
 
-              <View style={styles.formGroup}>
+              <View style={styles.inputContainer}>
                 <Text style={[styles.label, { color: colors.text }]}>Quantity (lbs)</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.background, color: colors.text, borderColor: colors.outline }]}
+                  value={quantity}
+                  onChangeText={setQuantity}
                   placeholder="Optional"
                   placeholderTextColor={colors.textSecondary}
                   keyboardType="decimal-pad"
-                  value={ticketForm.quantity}
-                  onChangeText={(text) => setTicketForm({ ...ticketForm, quantity: text })}
                 />
               </View>
 
-              <View style={styles.formGroup}>
+              <View style={styles.inputContainer}>
                 <Text style={[styles.label, { color: colors.text }]}>Notes</Text>
                 <TextInput
                   style={[styles.textArea, { backgroundColor: colors.background, color: colors.text, borderColor: colors.outline }]}
+                  value={notes}
+                  onChangeText={setNotes}
                   placeholder="Additional information..."
                   placeholderTextColor={colors.textSecondary}
                   multiline
                   numberOfLines={4}
-                  value={ticketForm.notes}
-                  onChangeText={(text) => setTicketForm({ ...ticketForm, notes: text })}
                 />
               </View>
 
-              <TouchableOpacity 
-                style={[styles.submitModalButton, { backgroundColor: colors.primary }]}
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.primary }]}
                 onPress={submitTicket}
                 activeOpacity={0.7}
               >
-                <Text style={styles.submitModalButtonText}>Submit Ticket</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity 
-                style={[styles.cancelButton, { borderColor: colors.outline }]}
-                onPress={closeTicketModal}
-                activeOpacity={0.7}
-              >
-                <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancel</Text>
+                <Text style={styles.modalButtonText}>Submit Ticket</Text>
               </TouchableOpacity>
             </ScrollView>
           </View>
@@ -361,7 +302,7 @@ const styles = StyleSheet.create({
   header: {
     paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 12,
+    paddingBottom: 16,
   },
   title: {
     fontSize: 28,
@@ -371,21 +312,6 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     fontWeight: '400',
-  },
-  setupBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginHorizontal: 20,
-    marginBottom: 12,
-    padding: 12,
-    borderRadius: 12,
-    borderWidth: 2,
-  },
-  setupText: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
   },
   scrollView: {
     flex: 1,
@@ -406,23 +332,36 @@ const styles = StyleSheet.create({
     boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.4)',
   },
   cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
     marginBottom: 12,
   },
   nameRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
   },
   yardName: {
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '700',
   },
-  badge: {
+  verifiedBadge: {
     width: 20,
     height: 20,
     borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  rating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  ratingText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   infoRow: {
     flexDirection: 'row',
@@ -434,11 +373,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '400',
     flex: 1,
-    lineHeight: 20,
   },
   metalsSection: {
     marginTop: 12,
-    marginBottom: 12,
+    marginBottom: 16,
   },
   metalsLabel: {
     fontSize: 13,
@@ -453,31 +391,12 @@ const styles = StyleSheet.create({
   metalTag: {
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
   },
   metalTagText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '600',
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 12,
-  },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 10,
-    borderRadius: 10,
-    borderWidth: 2,
-  },
-  actionText: {
-    fontSize: 15,
-    fontWeight: '700',
   },
   submitButton: {
     flexDirection: 'row',
@@ -486,26 +405,11 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 12,
     borderRadius: 12,
-    marginTop: 12,
   },
   submitButtonText: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#FFFFFF',
-  },
-  addYardButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: 16,
-    borderWidth: 2,
-    marginBottom: 16,
-  },
-  addYardText: {
-    fontSize: 16,
-    fontWeight: '700',
   },
   modalOverlay: {
     flex: 1,
@@ -522,7 +426,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   modalTitle: {
     fontSize: 24,
@@ -532,57 +436,44 @@ const styles = StyleSheet.create({
     maxHeight: '100%',
   },
   modalYardName: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '600',
     marginBottom: 20,
   },
-  formGroup: {
+  inputContainer: {
     marginBottom: 16,
   },
   label: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
   },
   input: {
-    borderWidth: 2,
-    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    borderRadius: 12,
     fontSize: 16,
-    fontWeight: '500',
+    borderWidth: 2,
   },
   textArea: {
-    borderWidth: 2,
-    borderRadius: 12,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    borderRadius: 12,
     fontSize: 16,
-    fontWeight: '500',
+    borderWidth: 2,
     minHeight: 100,
     textAlignVertical: 'top',
   },
-  submitModalButton: {
+  modalButton: {
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
-    marginBottom: 12,
-  },
-  submitModalButtonText: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  cancelButton: {
-    paddingVertical: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-    borderWidth: 2,
     marginBottom: 20,
   },
-  cancelButtonText: {
-    fontSize: 17,
+  modalButtonText: {
+    fontSize: 16,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
 });
