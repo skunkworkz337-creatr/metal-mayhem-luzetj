@@ -6,7 +6,7 @@ import { Stack, router } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { SystemBars } from "react-native-edge-to-edge";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
-import { useColorScheme, Alert } from "react-native";
+import { useColorScheme, Alert, Platform } from "react-native";
 import { useNetworkState } from "expo-network";
 import {
   DarkTheme,
@@ -17,7 +17,6 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { Button } from "@/components/button";
 import { WidgetProvider } from "@/contexts/WidgetContext";
-import mobileAds from 'react-native-google-mobile-ads';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -39,16 +38,23 @@ export default function RootLayout() {
     }
   }, [loaded]);
 
-  // Initialize AdMob
+  // Initialize AdMob only on native platforms
   useEffect(() => {
-    mobileAds()
-      .initialize()
-      .then(adapterStatuses => {
-        console.log('AdMob initialized successfully:', adapterStatuses);
-      })
-      .catch(error => {
-        console.error('AdMob initialization error:', error);
-      });
+    if (Platform.OS !== 'web') {
+      // Dynamically import mobileAds only on native platforms
+      import('react-native-google-mobile-ads')
+        .then((mobileAds) => {
+          return mobileAds.default().initialize();
+        })
+        .then(adapterStatuses => {
+          console.log('AdMob initialized successfully:', adapterStatuses);
+        })
+        .catch(error => {
+          console.error('AdMob initialization error:', error);
+        });
+    } else {
+      console.log('AdMob not available on web platform');
+    }
   }, []);
 
   React.useEffect(() => {

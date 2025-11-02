@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { View, StyleSheet, Platform, Text } from 'react-native';
+import { View, StyleSheet, Text } from 'react-native';
 import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { useThemeColors } from '@/styles/commonStyles';
 
@@ -9,6 +9,7 @@ interface AdBannerProps {
   size?: BannerAdSize;
 }
 
+// Native version (iOS/Android) - uses actual AdMob
 export default function AdBanner({ 
   adUnitId, 
   size = BannerAdSize.BANNER 
