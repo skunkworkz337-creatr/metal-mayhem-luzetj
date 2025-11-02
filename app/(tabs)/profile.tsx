@@ -8,6 +8,7 @@ import { scrapingScheduler, ScrapingConfig } from '@/services/scrapingScheduler'
 import { zohoApi, ZOHO_SETUP_INSTRUCTIONS } from '@/services/zohoApi';
 import { CURRENT_USER, isAdmin, isVerified } from '@/data/users';
 import { useRouter } from 'expo-router';
+import AdBanner from '@/components/AdBanner';
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
@@ -126,11 +127,16 @@ export default function ProfileScreen() {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
+        {/* AdMob Banner at the top */}
+        <View style={styles.adContainer}>
+          <AdBanner />
+        </View>
+
         {/* User Profile Section */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.outline }]}>
           <View style={styles.sectionHeader}>
             <IconSymbol name="person.circle.fill" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Account</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Account Information</Text>
           </View>
 
           <View style={styles.profileInfo}>
@@ -158,16 +164,55 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {!userIsVerified && (
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: colors.primary }]}
-              onPress={() => router.push('/onboarding')}
-              activeOpacity={0.7}
-            >
-              <IconSymbol name="checkmark.seal.fill" size={18} color="#FFFFFF" />
-              <Text style={styles.actionButtonText}>Complete Verification</Text>
-            </TouchableOpacity>
-          )}
+          {/* Verification Status */}
+          <View style={[styles.statusCard, { backgroundColor: colors.background, borderColor: colors.outline }]}>
+            <View style={styles.statusHeader}>
+              <IconSymbol 
+                name={userIsVerified ? "checkmark.circle.fill" : "exclamationmark.circle.fill"} 
+                size={20} 
+                color={userIsVerified ? colors.primary : colors.textSecondary} 
+              />
+              <Text style={[styles.statusTitle, { color: colors.text }]}>Verification Status</Text>
+            </View>
+            
+            <View style={styles.verificationList}>
+              <View style={styles.verificationItem}>
+                <IconSymbol 
+                  name={CURRENT_USER.emailVerified ? "checkmark.circle.fill" : "circle"} 
+                  size={18} 
+                  color={CURRENT_USER.emailVerified ? colors.primary : colors.textSecondary} 
+                />
+                <Text style={[styles.verificationText, { color: colors.text }]}>Email Verified</Text>
+              </View>
+              <View style={styles.verificationItem}>
+                <IconSymbol 
+                  name={CURRENT_USER.phoneVerified ? "checkmark.circle.fill" : "circle"} 
+                  size={18} 
+                  color={CURRENT_USER.phoneVerified ? colors.primary : colors.textSecondary} 
+                />
+                <Text style={[styles.verificationText, { color: colors.text }]}>Phone Verified</Text>
+              </View>
+              <View style={styles.verificationItem}>
+                <IconSymbol 
+                  name={CURRENT_USER.onboardingCompleted ? "checkmark.circle.fill" : "circle"} 
+                  size={18} 
+                  color={CURRENT_USER.onboardingCompleted ? colors.primary : colors.textSecondary} 
+                />
+                <Text style={[styles.verificationText, { color: colors.text }]}>Onboarding Complete</Text>
+              </View>
+            </View>
+
+            {!userIsVerified && (
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: colors.primary }]}
+                onPress={() => router.push('/onboarding')}
+                activeOpacity={0.7}
+              >
+                <IconSymbol name="checkmark.seal.fill" size={18} color="#FFFFFF" />
+                <Text style={styles.actionButtonText}>Complete Verification</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Badges Section */}
@@ -178,7 +223,7 @@ export default function ProfileScreen() {
         >
           <View style={styles.sectionHeader}>
             <IconSymbol name="star.fill" size={24} color={colors.primary} />
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Badges</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Badges & Achievements</Text>
             <View style={[styles.badgeCount, { backgroundColor: colors.primary }]}>
               <Text style={styles.badgeCountText}>{CURRENT_USER.badges.length}</Text>
             </View>
@@ -186,12 +231,12 @@ export default function ProfileScreen() {
           </View>
 
           <Text style={[styles.description, { color: colors.textSecondary }]}>
-            View your earned badges and see what&apos;s available to unlock
+            Track your progress and unlock achievements by contributing to the MetalMayhem community
           </Text>
 
-          {CURRENT_USER.badges.length > 0 && (
+          {CURRENT_USER.badges.length > 0 ? (
             <View style={styles.badgePreview}>
-              {CURRENT_USER.badges.slice(0, 3).map((badge) => (
+              {CURRENT_USER.badges.slice(0, 4).map((badge) => (
                 <View
                   key={badge.id}
                   style={[styles.badgeIcon, { backgroundColor: colors.primary + '20' }]}
@@ -199,16 +244,28 @@ export default function ProfileScreen() {
                   <IconSymbol name={badge.icon} size={24} color={colors.primary} />
                 </View>
               ))}
-              {CURRENT_USER.badges.length > 3 && (
+              {CURRENT_USER.badges.length > 4 && (
                 <View style={[styles.badgeMore, { backgroundColor: colors.textSecondary + '20' }]}>
                   <Text style={[styles.badgeMoreText, { color: colors.textSecondary }]}>
-                    +{CURRENT_USER.badges.length - 3}
+                    +{CURRENT_USER.badges.length - 4}
                   </Text>
                 </View>
               )}
             </View>
+          ) : (
+            <View style={[styles.emptyBadges, { backgroundColor: colors.background }]}>
+              <IconSymbol name="star" size={32} color={colors.textSecondary} />
+              <Text style={[styles.emptyBadgesText, { color: colors.textSecondary }]}>
+                No badges earned yet. Start contributing to unlock achievements!
+              </Text>
+            </View>
           )}
         </TouchableOpacity>
+
+        {/* AdMob Banner in the middle */}
+        <View style={styles.adContainer}>
+          <AdBanner />
+        </View>
 
         {/* Admin-Only Web Scraping Section */}
         {userIsAdmin && (
@@ -367,6 +424,11 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Bottom AdMob Banner */}
+        <View style={styles.adContainer}>
+          <AdBanner />
+        </View>
+
         <View style={{ height: 100 }} />
       </ScrollView>
     </SafeAreaView>
@@ -397,6 +459,10 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 20,
+  },
+  adContainer: {
+    marginBottom: 16,
+    alignItems: 'center',
   },
   section: {
     borderRadius: 16,
@@ -437,6 +503,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
     marginBottom: 6,
+    flexWrap: 'wrap',
   },
   profileName: {
     fontSize: 20,
@@ -466,6 +533,35 @@ const styles = StyleSheet.create({
   },
   profilePhone: {
     fontSize: 14,
+    fontWeight: '500',
+  },
+  statusCard: {
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    marginTop: 8,
+  },
+  statusHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  statusTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  verificationList: {
+    gap: 10,
+    marginBottom: 12,
+  },
+  verificationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  verificationText: {
+    fontSize: 15,
     fontWeight: '500',
   },
   badgeCount: {
@@ -502,6 +598,20 @@ const styles = StyleSheet.create({
   badgeMoreText: {
     fontSize: 14,
     fontWeight: '700',
+  },
+  emptyBadges: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 24,
+    borderRadius: 12,
+    marginTop: 8,
+  },
+  emptyBadgesText: {
+    fontSize: 14,
+    fontWeight: '500',
+    textAlign: 'center',
+    marginTop: 8,
+    paddingHorizontal: 20,
   },
   settingRow: {
     flexDirection: 'row',

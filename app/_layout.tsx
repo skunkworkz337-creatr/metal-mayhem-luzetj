@@ -1,3 +1,4 @@
+
 import "react-native-reanimated";
 import React, { useEffect } from "react";
 import { useFonts } from "expo-font";
@@ -16,6 +17,7 @@ import {
 import { StatusBar } from "expo-status-bar";
 import { Button } from "@/components/button";
 import { WidgetProvider } from "@/contexts/WidgetContext";
+import mobileAds from 'react-native-google-mobile-ads';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -36,6 +38,18 @@ export default function RootLayout() {
       SplashScreen.hideAsync();
     }
   }, [loaded]);
+
+  // Initialize AdMob
+  useEffect(() => {
+    mobileAds()
+      .initialize()
+      .then(adapterStatuses => {
+        console.log('AdMob initialized successfully:', adapterStatuses);
+      })
+      .catch(error => {
+        console.error('AdMob initialization error:', error);
+      });
+  }, []);
 
   React.useEffect(() => {
     if (
