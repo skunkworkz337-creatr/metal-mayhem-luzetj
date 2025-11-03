@@ -174,23 +174,19 @@ export default function MetalTypesScreen() {
 
                   <View style={styles.pricingSection}>
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>Current Pricing</Text>
-                    <View style={styles.priceGrid}>
-                      <View style={styles.priceItem}>
-                        <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>National</Text>
-                        <Text style={[styles.priceValue, { color: colors.primary }]}>$3.50/lb</Text>
-                      </View>
-                      <View style={styles.priceItem}>
-                        <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>Regional</Text>
-                        <Text style={[styles.priceValue, { color: colors.primary }]}>$3.45/lb</Text>
-                      </View>
-                      <View style={styles.priceItem}>
-                        <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>State</Text>
-                        <Text style={[styles.priceValue, { color: colors.primary }]}>$3.48/lb</Text>
-                      </View>
+                    <View style={styles.priceCard}>
+                      <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>National Average</Text>
+                      <Text style={[styles.priceValue, { color: colors.primary }]}>$3.50/lb</Text>
+                      <Text style={[styles.updateText, { color: colors.textSecondary }]}>
+                        Last updated: Monday, 11:59 PM CST
+                      </Text>
                     </View>
-                    <Text style={[styles.updateText, { color: colors.textSecondary }]}>
-                      Last updated: Monday, 11:59 PM CST
-                    </Text>
+                    <View style={[styles.infoBox, { backgroundColor: colors.background, borderColor: colors.outline }]}>
+                      <IconSymbol name="info.circle.fill" size={16} color={colors.primary} />
+                      <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+                        Regional and state pricing coming soon
+                      </Text>
+                    </View>
                   </View>
                 </View>
               )}
@@ -361,29 +357,41 @@ const styles = StyleSheet.create({
   pricingSection: {
     marginTop: 8,
   },
-  priceGrid: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 8,
-  },
-  priceItem: {
-    flex: 1,
+  priceCard: {
     alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    marginBottom: 12,
   },
   priceLabel: {
-    fontSize: 12,
+    fontSize: 14,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   priceValue: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: 32,
+    fontWeight: '800',
+    marginBottom: 8,
   },
   updateText: {
     fontSize: 11,
     fontWeight: '400',
-    textAlign: 'center',
     fontStyle: 'italic',
+  },
+  infoBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  infoText: {
+    flex: 1,
+    fontSize: 12,
+    fontWeight: '500',
   },
   emptyState: {
     alignItems: 'center',
