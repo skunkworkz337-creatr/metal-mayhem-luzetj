@@ -1,1 +1,8 @@
-se th// Error loading file: Failed to fetch components/AdBanner.web.tsx: 403 Forbidden
+
+import React from 'react';
+
+// AdMob ads are not supported on web
+// This is a web-specific placeholder component
+export default function AdBanner() {
+  return null;
+}
