@@ -3,11 +3,11 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, useColorScheme, TouchableOpacity, Switch, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/styles/commonStyles';
+import { useRouter } from 'expo-router';
+import { IconSymbol } from '@/components/IconSymbol';
 import { CURRENT_USER, isAdmin, isVerified } from '@/data/users';
 import AdBanner from '@/components/AdBanner';
-import { useRouter } from 'expo-router';
 import { zohoApi, ZOHO_SETUP_INSTRUCTIONS } from '@/services/zohoApi';
-import { IconSymbol } from '@/components/IconSymbol';
 import { scrapingScheduler, ScrapingConfig } from '@/services/scrapingScheduler';
 
 export default function ProfileScreen() {
@@ -16,54 +16,85 @@ export default function ProfileScreen() {
   const colors = useThemeColors();
   const isDark = colorScheme === 'dark';
   
-  const [schedulerConfig, setSchedulerConfig] = useState<ScrapingConfig>(scrapingScheduler.getStatus());
+  const [schedulerEnabled, setSchedulerEnabled] = useState(true);
+  const [schedulerConfig, setSchedulerConfig] = useState<ScrapingConfig | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
-    // Update scheduler status every minute
-    const interval = setInterval(() => {
-      setSchedulerConfig(scrapingScheduler.getStatus());
-    }, 60000);
-
-    return () => clearInterval(interval);
+    // Load scheduler status
+    const config = scrapingScheduler.getStatus();
+    setSchedulerConfig(config);
+    setSchedulerEnabled(config.enabled);
   }, []);
 
   const toggleScheduler = (value: boolean) => {
+    setSchedulerEnabled(value);
+    scrapingScheduler.updateConfig({ enabled: value });
+    
     if (value) {
       scrapingScheduler.start();
-      Alert.alert('Scheduler Started', 'Web scraping scheduler is now active and will fetch pricing data from Gumloop every Monday at 11:59 PM CST.');
+      Alert.alert('Scheduler Enabled', 'Web scraping scheduler has been started.');
     } else {
       scrapingScheduler.stop();
-      Alert.alert('Scheduler Stopped', 'Web scraping scheduler has been stopped.');
+      Alert.alert('Scheduler Disabled', 'Web scraping scheduler has been stopped.');
     }
-    setSchedulerConfig(scrapingScheduler.getStatus());
+    
+    // Refresh config
+    const config = scrapingScheduler.getStatus();
+    setSchedulerConfig(config);
   };
 
   const triggerManualScraping = async () => {
+    if (isUpdating) {
+      Alert.alert('Update in Progress', 'A pricing update is already in progress. Please wait.');
+      return;
+    }
+
     Alert.alert(
-      'Manual Scraping',
-      'This will fetch the latest pricing data from Gumloop. Continue?',
+      'Force Update Pricing',
+      'This will fetch the latest pricing data from Gumloop immediately. Continue?',
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Fetch Now',
+          text: 'Update Now',
+          style: 'default',
           onPress: async () => {
+            setIsUpdating(true);
             try {
-              console.log('Triggering manual scraping from Gumloop...');
-              await scrapingScheduler.triggerManualScraping();
-              Alert.alert('Success', 'Pricing data has been fetched from Gumloop successfully!');
-              setSchedulerConfig(scrapingScheduler.getStatus());
+              console.log('🔄 Starting force update...');
+              const prices = await scrapingScheduler.forceUpdate();
+              
+              Alert.alert(
+                'Update Complete',
+                `Successfully updated ${prices.length} metal prices from Gumloop.\n\nSource: ${prices[0]?.source || 'unknown'}\nTimestamp: ${new Date().toLocaleString()}`,
+                [{ text: 'OK' }]
+              );
+              
+              // Refresh config to show new last run time
+              const config = scrapingScheduler.getStatus();
+              setSchedulerConfig(config);
             } catch (error) {
-              console.error('Manual scraping error:', error);
-              Alert.alert('Error', 'Failed to fetch pricing data. Please try again later.');
+              console.error('Force update error:', error);
+              Alert.alert(
+                'Update Failed',
+                'Failed to fetch pricing data from Gumloop. Using cached data.\n\nError: ' + (error as Error).message,
+                [{ text: 'OK' }]
+              );
+            } finally {
+              setIsUpdating(false);
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   const showZohoSetup = () => {
-    Alert.alert('Zoho Setup', ZOHO_SETUP_INSTRUCTIONS);
+    Alert.alert(
+      'Zoho Integration Setup',
+      ZOHO_SETUP_INSTRUCTIONS,
+      [{ text: 'OK' }]
+    );
   };
 
   const formatDate = (date: Date | null): string => {
@@ -85,7 +116,7 @@ export default function ProfileScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <Text style={[styles.title, { color: colors.text }]}>Profile & Settings</Text>
+          <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
         </View>
 
         {/* User Info Card */}
@@ -106,165 +137,247 @@ export default function ProfileScreen() {
                 )}
               </View>
               <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{CURRENT_USER.email}</Text>
-              <Text style={[styles.userPhone, { color: colors.textSecondary }]}>{CURRENT_USER.phone}</Text>
+              <Text style={[styles.userPlan, { color: colors.primary }]}>
+                {CURRENT_USER.subscription} Plan
+              </Text>
             </View>
           </View>
 
           <TouchableOpacity 
-            style={styles.badgesButton}
+            style={[styles.badgesButton, { backgroundColor: colors.background, borderColor: colors.outline }]}
             onPress={() => router.push('/badges')}
             activeOpacity={0.7}
           >
             <IconSymbol name="trophy.fill" size={20} color={colors.primary} />
-            <Text style={[styles.badgesButtonText, { color: colors.primary }]}>
-              View Badges ({CURRENT_USER.badges.length})
+            <Text style={[styles.badgesText, { color: colors.text }]}>
+              View Badges & Achievements
             </Text>
             <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
           </TouchableOpacity>
         </View>
 
-        {/* Gumloop Integration Status */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.outline }]}>
-          <View style={styles.cardHeader}>
-            <IconSymbol name="arrow.triangle.2.circlepath" size={24} color={colors.primary} />
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Gumloop Integration</Text>
-          </View>
-          
-          <View style={[styles.infoBox, { backgroundColor: colors.background, borderColor: colors.outline }]}>
-            <IconSymbol name="link" size={16} color={colors.primary} />
-            <Text style={[styles.infoText, { color: colors.textSecondary }]} numberOfLines={1}>
-              {scrapingScheduler.getGumloopUrl()}
-            </Text>
-          </View>
-
-          <View style={styles.statusRow}>
-            <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Status:</Text>
-            <Text style={[styles.statusValue, { color: colors.primary }]}>
-              {schedulerConfig.enabled ? 'Active' : 'Inactive'}
-            </Text>
-          </View>
-
-          <View style={styles.statusRow}>
-            <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last Update:</Text>
-            <Text style={[styles.statusValue, { color: colors.text }]}>
-              {formatDate(schedulerConfig.lastRun)}
-            </Text>
-          </View>
-
-          <View style={styles.statusRow}>
-            <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Next Update:</Text>
-            <Text style={[styles.statusValue, { color: colors.text }]}>
-              {formatDate(schedulerConfig.nextRun)}
-            </Text>
-          </View>
-
-          <Text style={[styles.scheduleInfo, { color: colors.textSecondary }]}>
-            Automatic updates every Monday at 11:59 PM CST
-          </Text>
-        </View>
-
         {/* Admin Controls */}
         {isAdmin() && (
           <>
+            <View style={styles.sectionHeader}>
+              <IconSymbol name="gearshape.fill" size={20} color={colors.primary} />
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Admin Controls</Text>
+            </View>
+
+            {/* Gumloop Integration Status */}
             <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.outline }]}>
               <View style={styles.cardHeader}>
-                <IconSymbol name="gear" size={24} color={colors.primary} />
-                <Text style={[styles.cardTitle, { color: colors.text }]}>Admin Controls</Text>
+                <IconSymbol name="arrow.triangle.2.circlepath" size={24} color={colors.primary} />
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Gumloop Integration</Text>
+              </View>
+              
+              <View style={[styles.infoBox, { backgroundColor: colors.background, borderColor: colors.outline }]}>
+                <IconSymbol name="info.circle.fill" size={16} color={colors.primary} />
+                <Text style={[styles.infoText, { color: colors.textSecondary }]}>
+                  Pricing data is automatically fetched from Gumloop every Monday at 11:59 PM CST
+                </Text>
               </View>
 
+              <View style={styles.statusRow}>
+                <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>API Endpoint:</Text>
+                <Text style={[styles.statusValue, { color: colors.text }]} numberOfLines={1}>
+                  {scrapingScheduler.getGumloopUrl().substring(0, 40)}...
+                </Text>
+              </View>
+
+              <View style={styles.statusRow}>
+                <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Last Update:</Text>
+                <Text style={[styles.statusValue, { color: colors.text }]}>
+                  {formatDate(schedulerConfig?.lastRun || null)}
+                </Text>
+              </View>
+
+              <View style={styles.statusRow}>
+                <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Next Scheduled:</Text>
+                <Text style={[styles.statusValue, { color: colors.text }]}>
+                  {formatDate(schedulerConfig?.nextRun || null)}
+                </Text>
+              </View>
+
+              <View style={styles.statusRow}>
+                <Text style={[styles.statusLabel, { color: colors.textSecondary }]}>Cached Prices:</Text>
+                <Text style={[styles.statusValue, { color: colors.primary }]}>
+                  {scrapingScheduler.getCachedPrices().length} metals
+                </Text>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.forceUpdateButton,
+                  { 
+                    backgroundColor: colors.primary,
+                    opacity: isUpdating ? 0.6 : 1,
+                  }
+                ]}
+                onPress={triggerManualScraping}
+                disabled={isUpdating}
+                activeOpacity={0.7}
+              >
+                <IconSymbol 
+                  name={isUpdating ? "arrow.triangle.2.circlepath" : "arrow.clockwise"} 
+                  size={20} 
+                  color="#FFFFFF" 
+                />
+                <Text style={styles.forceUpdateText}>
+                  {isUpdating ? 'Updating...' : 'Force Update Now'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {/* Web Scraping Scheduler */}
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.outline }]}>
+              <View style={styles.cardHeader}>
+                <IconSymbol name="clock.fill" size={24} color={colors.primary} />
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Scraping Scheduler</Text>
+              </View>
+              
               <View style={styles.settingRow}>
                 <View style={styles.settingInfo}>
-                  <Text style={[styles.settingLabel, { color: colors.text }]}>Web Scraping Scheduler</Text>
+                  <Text style={[styles.settingLabel, { color: colors.text }]}>Enable Scheduler</Text>
                   <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>
-                    Automatically fetch pricing from Gumloop
+                    Automatically fetch pricing every Monday at 11:59 PM CST
                   </Text>
                 </View>
                 <Switch
-                  value={schedulerConfig.enabled}
+                  value={schedulerEnabled}
                   onValueChange={toggleScheduler}
-                  trackColor={{ false: colors.textSecondary, true: colors.primary }}
+                  trackColor={{ false: colors.outline, true: colors.primary }}
                   thumbColor="#FFFFFF"
                 />
               </View>
+            </View>
+
+            {/* Zoho Integration */}
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.outline }]}>
+              <View style={styles.cardHeader}>
+                <IconSymbol name="cloud.fill" size={24} color={colors.primary} />
+                <Text style={[styles.cardTitle, { color: colors.text }]}>Zoho Integration</Text>
+              </View>
+              
+              <Text style={[styles.cardDescription, { color: colors.textSecondary }]}>
+                Secure cloud storage for operational data and pricing tickets
+              </Text>
 
               <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.primary }]}
-                onPress={triggerManualScraping}
-                activeOpacity={0.7}
-              >
-                <IconSymbol name="arrow.clockwise" size={20} color="#FFFFFF" />
-                <Text style={styles.actionButtonText}>Fetch Pricing Now</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: colors.background, borderColor: colors.outline, borderWidth: 2 }]}
+                style={[styles.setupButton, { backgroundColor: colors.background, borderColor: colors.outline }]}
                 onPress={showZohoSetup}
                 activeOpacity={0.7}
               >
-                <IconSymbol name="cloud" size={20} color={colors.primary} />
-                <Text style={[styles.actionButtonTextOutline, { color: colors.primary }]}>Zoho Setup Instructions</Text>
+                <IconSymbol name="info.circle.fill" size={20} color={colors.primary} />
+                <Text style={[styles.setupButtonText, { color: colors.text }]}>
+                  View Setup Instructions
+                </Text>
               </TouchableOpacity>
             </View>
           </>
         )}
 
-        {/* Subscription Info */}
+        {/* Account Settings */}
+        <View style={styles.sectionHeader}>
+          <IconSymbol name="person.fill" size={20} color={colors.primary} />
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Account Settings</Text>
+        </View>
+
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.outline }]}>
-          <View style={styles.cardHeader}>
-            <IconSymbol name="star.fill" size={24} color={colors.primary} />
-            <Text style={[styles.cardTitle, { color: colors.text }]}>Subscription</Text>
-          </View>
-          
+          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <IconSymbol name="envelope.fill" size={20} color={colors.text} />
+            <Text style={[styles.menuText, { color: colors.text }]}>Email Preferences</Text>
+            <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: colors.outline }]} />
+
+          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <IconSymbol name="bell.fill" size={20} color={colors.text} />
+            <Text style={[styles.menuText, { color: colors.text }]}>Notifications</Text>
+            <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: colors.outline }]} />
+
+          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <IconSymbol name="lock.fill" size={20} color={colors.text} />
+            <Text style={[styles.menuText, { color: colors.text }]}>Privacy & Security</Text>
+            <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Subscription */}
+        <View style={styles.sectionHeader}>
+          <IconSymbol name="creditcard.fill" size={20} color={colors.primary} />
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Subscription</Text>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.outline }]}>
           <View style={styles.subscriptionInfo}>
-            <Text style={[styles.subscriptionTier, { color: colors.text }]}>
-              {CURRENT_USER.subscription.tier === 'free' ? 'Free' : 
-               CURRENT_USER.subscription.tier === 'pro' ? 'Pro' : 'Yard Pro'}
+            <Text style={[styles.subscriptionPlan, { color: colors.text }]}>
+              {CURRENT_USER.subscription} Plan
             </Text>
-            {CURRENT_USER.subscription.tier !== 'free' && (
-              <Text style={[styles.subscriptionExpiry, { color: colors.textSecondary }]}>
-                Renews on {new Date(CURRENT_USER.subscription.expiresAt!).toLocaleDateString()}
-              </Text>
-            )}
+            <Text style={[styles.subscriptionPrice, { color: colors.primary }]}>
+              {CURRENT_USER.subscription === 'Free' ? 'Free' : 
+               CURRENT_USER.subscription === 'Pro' ? '$1/month' : '$3/month'}
+            </Text>
           </View>
 
-          {CURRENT_USER.subscription.tier === 'free' && (
+          {CURRENT_USER.subscription === 'Free' && (
             <TouchableOpacity
               style={[styles.upgradeButton, { backgroundColor: colors.primary }]}
               activeOpacity={0.7}
             >
+              <IconSymbol name="arrow.up.circle.fill" size={20} color="#FFFFFF" />
               <Text style={styles.upgradeButtonText}>Upgrade to Pro</Text>
-              <IconSymbol name="arrow.right" size={16} color="#FFFFFF" />
             </TouchableOpacity>
           )}
         </View>
 
-        {/* App Info */}
-        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.outline }]}>
-          <View style={styles.cardHeader}>
-            <IconSymbol name="info.circle.fill" size={24} color={colors.primary} />
-            <Text style={[styles.cardTitle, { color: colors.text }]}>About</Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Version</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>1.0.0</Text>
-          </View>
-          
-          <View style={styles.infoRow}>
-            <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>Data Source</Text>
-            <Text style={[styles.infoValue, { color: colors.text }]}>Gumloop API</Text>
-          </View>
+        {/* Support */}
+        <View style={styles.sectionHeader}>
+          <IconSymbol name="questionmark.circle.fill" size={20} color={colors.primary} />
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>Support</Text>
         </View>
 
-        {/* Ad Banner for Free Users */}
-        {CURRENT_USER.subscription.tier === 'free' && (
-          <View style={styles.adContainer}>
-            <AdBanner />
-          </View>
-        )}
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.outline }]}>
+          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <IconSymbol name="book.fill" size={20} color={colors.text} />
+            <Text style={[styles.menuText, { color: colors.text }]}>Help Center</Text>
+            <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: colors.outline }]} />
+
+          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <IconSymbol name="message.fill" size={20} color={colors.text} />
+            <Text style={[styles.menuText, { color: colors.text }]}>Contact Support</Text>
+            <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+
+          <View style={[styles.divider, { backgroundColor: colors.outline }]} />
+
+          <TouchableOpacity style={styles.menuItem} activeOpacity={0.7}>
+            <IconSymbol name="doc.text.fill" size={20} color={colors.text} />
+            <Text style={[styles.menuText, { color: colors.text }]}>Terms & Privacy</Text>
+            <IconSymbol name="chevron.right" size={16} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Logout */}
+        <TouchableOpacity
+          style={[styles.logoutButton, { backgroundColor: colors.card, borderColor: colors.outline }]}
+          activeOpacity={0.7}
+        >
+          <IconSymbol name="arrow.right.square.fill" size={20} color="#FF3B30" />
+          <Text style={[styles.logoutText, { color: '#FF3B30' }]}>Log Out</Text>
+        </TouchableOpacity>
 
         <View style={{ height: 100 }} />
       </ScrollView>
+
+      <AdBanner />
     </SafeAreaView>
   );
 }
@@ -277,33 +390,25 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   header: {
+    paddingHorizontal: 20,
     paddingTop: 20,
-    paddingBottom: 20,
+    paddingBottom: 16,
   },
   title: {
     fontSize: 32,
     fontWeight: '800',
   },
   card: {
-    borderRadius: 16,
-    padding: 20,
+    marginHorizontal: 20,
     marginBottom: 16,
+    padding: 16,
+    borderRadius: 16,
     borderWidth: 2,
     boxShadow: '0px 4px 12px rgba(0, 0, 0, 0.1)',
     elevation: 4,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '700',
   },
   userHeader: {
     flexDirection: 'row',
@@ -345,32 +450,58 @@ const styles = StyleSheet.create({
   },
   userEmail: {
     fontSize: 14,
-    fontWeight: '500',
-    marginBottom: 2,
+    fontWeight: '400',
+    marginBottom: 4,
   },
-  userPhone: {
+  userPlan: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   badgesButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    padding: 12,
     borderRadius: 12,
     borderWidth: 2,
-    borderColor: 'rgba(128, 128, 128, 0.2)',
   },
-  badgesButtonText: {
+  badgesText: {
     fontSize: 16,
+    fontWeight: '600',
+    flex: 1,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 12,
+  },
+  cardTitle: {
+    fontSize: 18,
     fontWeight: '700',
     flex: 1,
   },
+  cardDescription: {
+    fontSize: 14,
+    fontWeight: '400',
+    marginBottom: 12,
+    lineHeight: 20,
+  },
   infoBox: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     gap: 8,
     padding: 12,
     borderRadius: 8,
@@ -379,8 +510,9 @@ const styles = StyleSheet.create({
   },
   infoText: {
     flex: 1,
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '500',
+    lineHeight: 16,
   },
   statusRow: {
     flexDirection: 'row',
@@ -394,21 +526,30 @@ const styles = StyleSheet.create({
   },
   statusValue: {
     fontSize: 14,
-    fontWeight: '700',
-  },
-  scheduleInfo: {
-    fontSize: 12,
     fontWeight: '500',
-    fontStyle: 'italic',
-    marginTop: 8,
-    textAlign: 'center',
+    flex: 1,
+    textAlign: 'right',
+    marginLeft: 12,
+  },
+  forceUpdateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    padding: 14,
+    borderRadius: 12,
+    marginTop: 12,
+  },
+  forceUpdateText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
   settingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingVertical: 12,
-    gap: 16,
+    gap: 12,
   },
   settingInfo: {
     flex: 1,
@@ -421,71 +562,76 @@ const styles = StyleSheet.create({
   settingDescription: {
     fontSize: 13,
     fontWeight: '400',
+    lineHeight: 18,
   },
-  actionButton: {
+  setupButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    gap: 8,
+    padding: 12,
     borderRadius: 12,
-    marginTop: 12,
+    borderWidth: 2,
   },
-  actionButtonText: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#FFFFFF',
+  setupButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
   },
-  actionButtonTextOutline: {
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 12,
+  },
+  menuText: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '500',
+    flex: 1,
+  },
+  divider: {
+    height: 1,
+    marginVertical: 4,
   },
   subscriptionInfo: {
     alignItems: 'center',
     paddingVertical: 12,
+    marginBottom: 12,
   },
-  subscriptionTier: {
-    fontSize: 24,
-    fontWeight: '800',
+  subscriptionPlan: {
+    fontSize: 20,
+    fontWeight: '700',
     marginBottom: 4,
   },
-  subscriptionExpiry: {
-    fontSize: 14,
-    fontWeight: '500',
+  subscriptionPrice: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   upgradeButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
+    padding: 14,
     borderRadius: 12,
-    marginTop: 12,
   },
   upgradeButtonText: {
     fontSize: 16,
     fontWeight: '700',
     color: '#FFFFFF',
   },
-  infoRow: {
+  logoutButton: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
-  },
-  infoLabel: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  infoValue: {
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  adContainer: {
+    justifyContent: 'center',
+    gap: 8,
+    marginHorizontal: 20,
     marginTop: 8,
-    marginBottom: 16,
-    alignItems: 'center',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 2,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
