@@ -1,10 +1,11 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, useColorScheme, TextInput, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useThemeColors } from '@/styles/commonStyles';
 import { IconSymbol } from '@/components/IconSymbol';
 import { metalTypesDatabase, MetalType, searchMetals } from '@/data/metalTypes';
+import { scrapingScheduler, PriceData } from '@/services/scrapingScheduler';
 
 export default function MetalTypesScreen() {
   const colorScheme = useColorScheme();
@@ -14,6 +15,17 @@ export default function MetalTypesScreen() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [expandedMetalId, setExpandedMetalId] = useState<string | null>(null);
+  const [prices, setPrices] = useState<PriceData[]>([]);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+  // Load cached prices on mount
+  useEffect(() => {
+    const cachedPrices = scrapingScheduler.getCachedPrices();
+    if (cachedPrices.length > 0) {
+      setPrices(cachedPrices);
+      setLastUpdate(new Date());
+    }
+  }, []);
 
   // Filter metals based on search and category
   const filteredMetals = React.useMemo(() => {
@@ -42,6 +54,31 @@ export default function MetalTypesScreen() {
     setExpandedMetalId(expandedMetalId === metalId ? null : metalId);
   };
 
+  // Get price for a specific metal
+  const getPriceForMetal = (metalId: string): string => {
+    const priceData = prices.find(p => p.metalId === metalId);
+    if (priceData) {
+      return `$${priceData.nationalPrice.toFixed(2)}/lb`;
+    }
+    return 'Price unavailable';
+  };
+
+  // Format last update time
+  const formatLastUpdate = (): string => {
+    if (!lastUpdate) return 'Never';
+    
+    const now = new Date();
+    const diff = now.getTime() - lastUpdate.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days} day${days > 1 ? 's' : ''} ago`;
+    if (hours > 0) return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    if (minutes > 0) return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    return 'Just now';
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <View style={styles.header}>
@@ -49,6 +86,19 @@ export default function MetalTypesScreen() {
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           Comprehensive guide to scrap metals
         </Text>
+      </View>
+
+      {/* Gumloop Integration Info */}
+      <View style={[styles.gumloopBanner, { backgroundColor: colors.card, borderColor: colors.outline }]}>
+        <IconSymbol name="arrow.triangle.2.circlepath" size={16} color={colors.primary} />
+        <View style={styles.gumloopText}>
+          <Text style={[styles.gumloopTitle, { color: colors.text }]}>
+            Powered by Gumloop
+          </Text>
+          <Text style={[styles.gumloopSubtitle, { color: colors.textSecondary }]}>
+            Updates every Monday at 11:59 PM CST • Last update: {formatLastUpdate()}
+          </Text>
+        </View>
       </View>
 
       {/* Search Bar */}
@@ -119,6 +169,7 @@ export default function MetalTypesScreen() {
       >
         {filteredMetals.map((metal) => {
           const isExpanded = expandedMetalId === metal.id;
+          const price = getPriceForMetal(metal.id);
           
           return (
             <TouchableOpacity
@@ -176,9 +227,9 @@ export default function MetalTypesScreen() {
                     <Text style={[styles.sectionTitle, { color: colors.text }]}>Current Pricing</Text>
                     <View style={styles.priceCard}>
                       <Text style={[styles.priceLabel, { color: colors.textSecondary }]}>National Average</Text>
-                      <Text style={[styles.priceValue, { color: colors.primary }]}>$3.50/lb</Text>
+                      <Text style={[styles.priceValue, { color: colors.primary }]}>{price}</Text>
                       <Text style={[styles.updateText, { color: colors.textSecondary }]}>
-                        Last updated: Monday, 11:59 PM CST
+                        Via Gumloop • Updated weekly
                       </Text>
                     </View>
                     <View style={[styles.infoBox, { backgroundColor: colors.background, borderColor: colors.outline }]}>
@@ -225,6 +276,28 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 16,
+    fontWeight: '400',
+  },
+  gumloopBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 20,
+    marginBottom: 12,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 2,
+    gap: 10,
+  },
+  gumloopText: {
+    flex: 1,
+  },
+  gumloopTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  gumloopSubtitle: {
+    fontSize: 11,
     fontWeight: '400',
   },
   searchContainer: {
